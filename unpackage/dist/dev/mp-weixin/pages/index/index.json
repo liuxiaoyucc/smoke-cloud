@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "云吸烟",
+  "usingComponents": {
+    "cigarette": "/components/cigarette/cigarette"
+  }
+}
