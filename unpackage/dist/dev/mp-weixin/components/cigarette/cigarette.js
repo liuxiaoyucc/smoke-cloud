@@ -247,12 +247,15 @@ var _default = {
   methods: {
     // 点火
     fire: function fire() {
-      this.cigarette.status = 1; // 香烟正常燃烧状态
-      this.cigarette.fire_status = 1; // 火焰正常状态
-      this.cigarette.smoke_status = 1; // 烟雾正常状态
-      this.cigarette.soot_length = 0; // 初始化烟灰长度
-      this.cigarette.length = this.cigarette.length - this.cigarette.fire_length;
-      this.auto_burn();
+      if (this.cigarette.status == 0) {
+        // 未点燃状态才能点火
+        this.cigarette.status = 1; // 香烟正常燃烧状态
+        this.cigarette.fire_status = 1; // 火焰正常状态
+        this.cigarette.smoke_status = 1; // 烟雾正常状态
+        this.cigarette.soot_length = 0; // 初始化烟灰长度
+        this.cigarette.length = this.cigarette.length - this.cigarette.fire_length - 5; // 减去火焰长度, 减去火焰下方黑边长度
+        this.auto_burn();
+      }
     },
     // 弹烟灰
     flick: function flick() {
@@ -261,21 +264,30 @@ var _default = {
     // 吸一口
     absort: function absort() {
       var _this = this;
-      this.cigarette.status = 2; // 香烟状态变为吸一口
-      this.cigarette.fire_status = 2; // 火焰状态变成吸一口
-      this.cigarette.smoke_status = 2; // 烟雾状态变成吸一口
-      this.soot_length += 12; //  烟灰变长一截
+      if (this.cigarette.status == 1) {
+        // 正常燃烧在状态才能来一口
+        this.cigarette.status = 2; // 香烟状态变为吸一口
+        this.cigarette.fire_status = 2; // 火焰状态变成吸一口
+        this.cigarette.smoke_status = 2; // 烟雾状态变成吸一口
+        this.cigarette.soot_length = this.cigarette.soot_length + 12; //  烟灰变长一截
+        this.cigarette.length = this.cigarette.length - 12 / 4 * 5 - (CIGARETTE_FIRE_LENGTH_ACTIVE - CIGARETTE_FIRE_LENGTH); //  烟体变短
 
-      // 恢复香烟状态
-      setTimeout(function () {
-        _this.cigarette.status = 1;
-        _this.cigarette.fire_status = 1;
-        _this.cigarette.smoke_status = 1;
-      }, 1500);
+        // 恢复香烟状态
+        setTimeout(function () {
+          _this.cigarette.status = 1;
+          _this.cigarette.fire_status = 1;
+          _this.cigarette.smoke_status = 1;
+          _this.cigarette.soot_length = _this.cigarette.soot_length + (CIGARETTE_FIRE_LENGTH_ACTIVE - CIGARETTE_FIRE_LENGTH) / 5 * 4;
+        }, 1500);
+      }
     },
     // 熄烟
     extinguish: function extinguish() {
       var is_clear_soot = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 1;
+      if (this.cigarette.status != 1) {
+        // 非正常燃烧状态不能熄灭
+        return;
+      }
       clearInterval(this.timer); // 清除定时器
       this.cigarette.status = 3; // 修改香烟状态为结束
       this.cigarette.smoke_status = 0; // 烟雾状态熄灭
