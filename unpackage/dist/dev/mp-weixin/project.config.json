@@ -21,6 +21,7 @@
   },
   "compileType": "miniprogram",
   "libVersion": "2.25.3",
+  "appid": "wx7bd5e6c11abf619b",
   "projectname": "smoke-cloud",
   "condition": {},
   "editorSetting": {

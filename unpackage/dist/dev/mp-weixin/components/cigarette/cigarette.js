@@ -81,12 +81,23 @@ var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
-  var g0 = _vm.cigarette.length
+  var l0 = _vm.__map(_vm.cigarette.soot_length, function (soot_item, s_index) {
+    var $orig = _vm.__get_orig(soot_item)
+    var g0 = s_index == 0 ? Math.round(Math.random() * 1) : null
+    var g1 = !(s_index == 0) ? Math.round(Math.random() * 1) : null
+    return {
+      $orig: $orig,
+      g0: g0,
+      g1: g1,
+    }
+  })
+  var g2 = _vm.cigarette.length
   _vm.$mp.data = Object.assign(
     {},
     {
       $root: {
-        g0: g0,
+        l0: l0,
+        g2: g2,
       },
     }
   )
@@ -173,6 +184,10 @@ exports.default = void 0;
 //
 //
 //
+//
+//
+//
+
 /**
  * 吸烟动作处理
  * 方案一: 监听麦克风
@@ -181,56 +196,109 @@ exports.default = void 0;
  * 方案一: 监听手机背部敲击事件
  * 方案二: 监听'摇一摇'
  * 方案三: 连续敲击手机屏幕
+ * 
+ * 香烟状态
+ * 0未点燃时, 烟灰长度为0, 香烟长度为初始长度, 火焰状态为0, 烟雾状态为0
+ * 1正常燃烧时, 火焰状态为1, 烟雾状态为1
+ * 2吸一口状态, 火焰状态为2, 烟雾状态为2, 烟灰长度变长, 香烟长度减小
+ * 3吸烟结束状态, 火焰状态为0, 烟雾状态为0, 烟灰长度为0
+ * 弹烟灰时, 烟灰长度为0, 火焰状态为1
  */
+
+var CIGARETTE_LENGTH = 550; // 香烟初始长度 rpx
+var CIGARETTE_FIRE_LENGTH = 30;
+var CIGARETTE_FIRE_LENGTH_ACTIVE = 50;
 var _default = {
   name: "cigarette",
   props: {},
   data: function data() {
     return {
+      timer: '',
       cigarette: {
-        length: 850,
-        // 香烟长度, rpx
+        length: CIGARETTE_LENGTH,
+        // 香烟长度剩余, 区别于 CIGARETTE_LENGTH
         status: 0,
         // 香烟状态 0未点燃, 1正常燃烧中, 2吸一口烟状态 3吸烟结束状态
         soot_length: 0,
-        // 烟灰长度
+        // 烟灰长度, 已4为单位
         smoke_status: 0,
         // 烟雾状态 0无烟 1正常状态烟雾, 2吸一口状态烟雾
-        fire_status: 0 // 火焰状态 0无火, 1正常燃烧, 2 吸一口状态
+        fire_status: 0,
+        // 火焰状态 0无火, 1正常燃烧, 2 吸一口状态
+        fire_length: CIGARETTE_FIRE_LENGTH,
+        fire_length_active: CIGARETTE_FIRE_LENGTH_ACTIVE
       }
     };
   },
-
-  watch: {
-    'cigarette.status': function cigaretteStatus(newValue, oldValue) {
-      console.log(newValue);
+  computed: {
+    soot_color: function soot_color() {
+      return Math.round(Math.random() * 1);
     }
   },
+  watch: {
+    'cigarette.status': function cigaretteStatus(new_status, old_status) {},
+    'cigarette.fire_status': function cigaretteFire_status(new_status, old_status) {
+      if (new_status = 0) {
+        this.cigarette.soot_length = 0;
+      }
+    }
+  },
+  onLoad: function onLoad() {},
   methods: {
     // 点火
     fire: function fire() {
-      console.log('asd');
-      this.cigarette.status = 1;
-      this.cigarette.fire_status = 1;
-      this.cigarette.smoke_status = 1;
+      this.cigarette.status = 1; // 香烟正常燃烧状态
+      this.cigarette.fire_status = 1; // 火焰正常状态
+      this.cigarette.smoke_status = 1; // 烟雾正常状态
+      this.cigarette.soot_length = 0; // 初始化烟灰长度
+      this.cigarette.length = this.cigarette.length - this.cigarette.fire_length;
+      this.auto_burn();
     },
     // 弹烟灰
     flick: function flick() {
-      this.cigarette.soot_length = 0;
+      this.cigarette.soot_length = 0; // 烟灰长度清零
     },
     // 吸一口
     absort: function absort() {
-      // 烟灰边长
-      this.cigarette.status = 2;
+      var _this = this;
+      this.cigarette.status = 2; // 香烟状态变为吸一口
+      this.cigarette.fire_status = 2; // 火焰状态变成吸一口
+      this.cigarette.smoke_status = 2; // 烟雾状态变成吸一口
+      this.soot_length += 12; //  烟灰变长一截
+
+      // 恢复香烟状态
+      setTimeout(function () {
+        _this.cigarette.status = 1;
+        _this.cigarette.fire_status = 1;
+        _this.cigarette.smoke_status = 1;
+      }, 1500);
     },
     // 熄烟
     extinguish: function extinguish() {
-      this.cigarette.status = 3;
+      var is_clear_soot = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 1;
+      clearInterval(this.timer); // 清除定时器
+      this.cigarette.status = 3; // 修改香烟状态为结束
+      this.cigarette.smoke_status = 0; // 烟雾状态熄灭
+      this.cigarette.fire_status = 0; // 熄火
+      if (is_clear_soot) {
+        this.cigarette.soot_length = 0; // 清除烟灰
+      }
     },
-    // 随着时间自燃烧事件
+    /**
+     *  随着时间自燃烧事件
+     * 1. 香烟长度变短
+     * 2. 烟灰长度变长
+     */
     auto_burn: function auto_burn() {
-      this.cigarette.soot_length += 5;
-      this.cigarette.length -= 5;
+      var _this2 = this;
+      this.timer = setInterval(function () {
+        _this2.cigarette.length -= 5; // 香烟长度随时间变短
+        _this2.cigarette.soot_length += 4; // 烟灰长度随时间变长
+        if (_this2.cigarette.length <= 0) {
+          clearInterval(_this2.timer);
+          _this2.extinguish(0);
+        }
+      }, 300);
     }
   }
 };
